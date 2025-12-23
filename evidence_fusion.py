@@ -12,13 +12,12 @@ OUTPUT_DIR = os.path.expanduser("~/Desktop/Degree Project/2DV50E/outputs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ==============================================================================
-# Part 1: Core Evidence Fusion System (Corresponds to Chapter 3)
+# Part 1: Core Evidence Fusion System
 # ==============================================================================
 
 class EvidenceFusion:
     
     def __init__(self):
-        # ==================== Section 3.2 Parameters ====================
         # Feature weight vector (8 features)
         # [F1:Response Status Code, F2:Response Time, F3:Content Difference, F4:Vulnerability Type, 
         #  F5:Payload Success Rate, F6:Database Fingerprint, F7:Data Extraction, F8:Sensitive Fields]
@@ -39,7 +38,6 @@ class EvidenceFusion:
         self.strong_evidence_floor = 0.80  # Lower Bound of Evidence Credibility
         self.healthcare_bonus = 0.08       # Medical Field Bonus
         
-        # ==================== Section 3.3.1 Parameters ====================
         # Adaptive thresholds for medical scenarios
         # This is a core innovation of my thesis!
         self.medical_thresholds = {
@@ -80,7 +78,6 @@ class EvidenceFusion:
             'low': 0.30
         }
         
-        # ==================== Section 3.4.3 Parameters ====================
         # Medical data sensitivity classification
         # Core Innovation: Automatically identifies sensitive medical data and escalates risk levels.
         self.data_sensitivity_keywords = {
@@ -111,7 +108,7 @@ class EvidenceFusion:
         }
     
     # ========================================================================
-    # Section 3.2: Evidence Collection and Fusion 
+    # Evidence Collection and Fusion 
     # ========================================================================
     
     def extract_features_from_sqlmap(self, sqlmap_result: Dict) -> np.ndarray:
@@ -280,7 +277,7 @@ class EvidenceFusion:
         return c_adjusted, triggered_rules
     
     # ========================================================================
-    # Section 3.3.1 Function: Confidence-Based Stratification Mechanism
+    # Confidence-Based Stratification Mechanism
     # ========================================================================
     
     def get_adaptive_thresholds(self, module_risk_level: Optional[str] = None) -> Dict:
@@ -334,7 +331,7 @@ class EvidenceFusion:
             }
     
     # ========================================================================
-    #  Section 3.3.2 Functionality: Decision Rule Engine
+    # Decision Rule Engine (Remove)!!!
     # ========================================================================
     
     def make_decision(self, c_final: float, module_info: Dict) -> Dict:
@@ -417,7 +414,7 @@ class EvidenceFusion:
             return f"{module_name} No significant SQL injection risks were detected."
     
     # ========================================================================
-    # Section 3.4 Function: Medical Special Rules
+    # Medical Special Rules
     # ========================================================================
     
     def detect_data_sensitivity(self, param_name: str) -> Tuple[str, Dict]:
@@ -565,7 +562,7 @@ class EvidenceFusion:
                 print("No rules triggered")
             print(f"\nFinal Confidence Level: {c_final:.4f}")
         
-        # ========== Step 5: Layered Decision-Making（3.3.1 + 3.3.2）==========
+        # ========== Step 5: Layered Decision-Making==========
         decision = self.make_decision(c_final, module_info)
         
         if verbose:
@@ -583,7 +580,7 @@ class EvidenceFusion:
             if decision['escalation_path']:
                 print(f"Upgrade Path: {' → '.join(decision['escalation_path'])}")
         
-        # ========== Step 6: Special Medical Rules（3.4.3）==========
+        # ========== Step 6: Special Medical Rules ==========
         decision = self.apply_medical_rules(decision, module_info)
         
         if verbose:
@@ -624,7 +621,7 @@ class EvidenceFusion:
 
 
 # ==============================================================================
-# Part 2: Experimental Evaluation Framework (Corresponds to Chapter 4)
+# Part 2: Experimental Evaluation Framework
 # ==============================================================================
 
 class ExperimentEvaluator:
