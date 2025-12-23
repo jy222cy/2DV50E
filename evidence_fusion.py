@@ -235,9 +235,11 @@ class EvidenceFusion:
                   self.tool_weights['zap'] * s_zap)
         return c_base
     
+    
     def apply_heuristic_rules(self, c_base: float, s_sqlmap: float, s_zap: float,
                             features_sqlmap: np.ndarray, 
-                            features_zap: np.ndarray) -> Tuple[float, List[str]]:
+                            features_zap: np.ndarray,
+                            module_risk_level: Optional[str] = None) -> Tuple[float, List[str]]:
         c_adjusted = c_base
         triggered_rules = []
         diff = abs(s_sqlmap - s_zap)
@@ -249,12 +251,18 @@ class EvidenceFusion:
             triggered_rules.append(f"Rule 1 - Consistency Reward: diff={diff:.3f} < {self.consistency_threshold}, "
                                 f"Confidence level × {1+self.consistency_bonus}")
         
-        # Rule 2: Penalty for Disagreement
-        # When two tools yield significantly divergent results, reduce confidence (as it may be a false positive).
-        elif diff > self.divergence_threshold:
-            c_adjusted *= (1 - self.divergence_penalty)
-            triggered_rules.append(f"Rule 2 - Divergence Penalty: diff={diff:.3f} > {self.divergence_threshold}, "
-                                f"Confidence level × {1-self.divergence_penalty}")
+        # Rule 2: Non-linear Divergence Penalty (REVISED)
+        # Penalty increases quadratically with tool disagreement to handle borderline cases
+        if diff > 0:  # Always calculate penalty when there's any difference
+            # Quadratic penalty: penalty = (diff / baseline)^2 * max_penalty
+            baseline_diff = 0.30  # Baseline threshold for maximum penalty
+            max_penalty = 0.30    # Maximum penalty cap (30%)
+            penalty = min((diff / baseline_diff) ** 2 * 0.15, max_penalty)
+            
+            if penalty > 0.01:  # Only apply if penalty is significant (>1%)
+                c_adjusted *= (1 - penalty)
+                triggered_rules.append(f"Rule 2 - Non-linear Divergence Penalty: diff={diff:.3f}, "
+                                    f"penalty={penalty:.3f}, Confidence level × {1-penalty:.3f}")
         
         # Rule 3: Strong Evidence Boost
         # When explicit SQL error messages are detected, this constitutes strong evidence.
@@ -266,11 +274,14 @@ class EvidenceFusion:
                 triggered_rules.append(f"Rule 3 - Strong Evidence Boost: F3={max(features_sqlmap[2], features_zap[2]):.3f} > "
                                     f"{self.strong_evidence_threshold}, Confidence level increased to ≥ {self.strong_evidence_floor}")
         
-        # Rule 4: Medical Field Bonus
-        # Vulnerabilities in medical sensitive fields carry more severe consequences and require a more conservative assessment.
-        if features_sqlmap[7] == 1.0 or features_zap[7] == 1.0:
-            c_adjusted = min(c_adjusted + self.healthcare_bonus, 1.0)
-            triggered_rules.append(f"Rule 4 - Medical Field Bonus: F8=1, Confidence + {self.healthcare_bonus}")
+        # Rule 4: Medical Risk-Based Multiplicative Weighting (REVISED)
+        # L1/L2 modules receive multiplicative bonus based on risk severity
+        if module_risk_level in ['L1', 'L2']:
+            old_c = c_adjusted
+            c_adjusted *= (1 + self.healthcare_bonus)
+            c_adjusted = min(c_adjusted, 1.0)  # Cap at 1.0
+            triggered_rules.append(f"Rule 4 - Medical Risk Multiplicative Bonus: {module_risk_level}, "
+                                f"Confidence {old_c:.4f} × {1+self.healthcare_bonus} = {c_adjusted:.4f}")
         
         # Ensure that the confidence level falls within the range [0, 1].
         c_adjusted = max(0.0, min(1.0, c_adjusted))
@@ -665,7 +676,7 @@ class ExperimentEvaluator:
                         method: str = 'full') -> List[Dict]:
         results = []
         
-        print(f"\nStart batch detection (Method: {method})...")
+        print(f"Start batch detection (Method: {method})...")
         print(f"Total {len(test_cases)} test case")
         
         for i, tc in enumerate(test_cases, 1):
@@ -732,7 +743,7 @@ class ExperimentEvaluator:
             if i % 10 == 0 or i == len(test_cases):
                 print(f"Progress: {i}/{len(test_cases)}")
         
-        print(f"Batch inspection completed\n")
+        print(f"Batch inspection completed")
         return results
     
     def calculate_metrics(self, results: List[Dict], 
@@ -775,9 +786,8 @@ class ExperimentEvaluator:
     # Confidence Distribution Analysis
     # ========================================================================
     def analyze_confidence_distribution(self, test_cases: List[Dict]) -> Dict:
-        print("\n" + "="*70)
+        print("\n")
         print("Confidence Distribution Analysis")
-        print("="*70)
         results = self.run_batch_detection(test_cases, method='full')
     
         # Group Statistics
@@ -899,9 +909,7 @@ class ExperimentEvaluator:
     # ========================================================================
     def compare_methods(self, test_cases: List[Dict], 
                     confidence_threshold: float = 0.5) -> pd.DataFrame:
-        print("\n" + "="*70)
         print("Method Comparison")
-        print("="*70)
         
         methods = {
             'SQLMap Only': 'sqlmap_only',
@@ -925,16 +933,14 @@ class ExperimentEvaluator:
         # Retain only key indicators
         df = df[['precision', 'recall', 'f1_score', 'fpr', 'fnr']]
         
-        print("\n" + "="*70)
         print("Method Comparison Results:")
-        print("="*70)
         print(df.to_string())
         print("\n")
         
         # Save Results
         output_file = os.path.join(OUTPUT_DIR, 'method_comparison.csv')
         df.to_csv(output_file)
-        print(f"The comparison results have been saved to: {output_file}\n")
+        print(f"📁 The comparison results saved to: {output_file}\n")
         
         return df
     
@@ -945,9 +951,7 @@ class ExperimentEvaluator:
     def ablation_study(self, test_cases: List[Dict], 
                     confidence_threshold: float = 0.5) -> Dict:
         
-        print("\n" + "="*70)
         print("Heuristic Rule Contribution Analysis")
-        print("="*70)
         
         results_dict = {}
         
@@ -980,17 +984,14 @@ class ExperimentEvaluator:
         baseline_f1 = full_metrics['f1_score']
         df['F1_drop'] = df['f1_score'].apply(lambda x: round((baseline_f1 - x) * 100, 2))
         
-        print("\n" + "="*70)
         print("Melting Experiment Results:")
-        print("="*70)
         print(df.to_string())
-        print("\n Note: F1_drop indicates the percentage decrease in F1 score compared to the full method")
         print("\n")
         
         # Save results
         output_file = os.path.join(OUTPUT_DIR, 'ablation_study.csv')
         df.to_csv(output_file)
-        print(f"The dissolution test results have been saved to: {output_file}\n")
+        print(f"📁 The dissolution test results saved to: {output_file}\n")
         
         return results_dict
     
@@ -1031,9 +1032,7 @@ class ExperimentEvaluator:
     
     def test_adaptive_thresholds(self, test_cases: List[Dict]) -> Dict:
         
-        print("\n" + "="*70)
         print("Medical Scenario Adaptability Testing")
-        print("="*70)
         
         # Test cases grouped by risk level
         grouped_cases = defaultdict(list)
@@ -1048,17 +1047,17 @@ class ExperimentEvaluator:
                 continue
             
             cases = grouped_cases[risk_level]
-            print(f"\n Test Risk Level: {risk_level} ({len(cases)}test case)")
+            print(f"\nTest Risk Level: {risk_level} ({len(cases)}test case)")
             
             # 1. Use standard thresholds
-            print(" - Use standard thresholds (0.50)")
+            print("- Use standard thresholds (0.50)")
             standard_threshold = 0.50
             standard_results = self.run_batch_detection(cases, method='full')
             standard_metrics = self.calculate_metrics(standard_results, standard_threshold)
             
             # 2. Use adaptive thresholding
             adaptive_threshold = self.fusion.medical_thresholds[risk_level]['high']
-            print(f" - Use adaptive thresholding ({adaptive_threshold})")
+            print(f"- Use adaptive thresholding ({adaptive_threshold})")
             adaptive_results = self.run_batch_detection(cases, method='full')
             adaptive_metrics = self.calculate_metrics(adaptive_results, adaptive_threshold)
             
@@ -1076,16 +1075,15 @@ class ExperimentEvaluator:
         # Create a comparison table
         df = pd.DataFrame.from_dict(results_dict, orient='index')
         
-        print("\n" + "="*70)
+        print("\n")
         print("Adaptive Threshold Effect:")
-        print("="*70)
         print(df.to_string())
         print("\n")
         
         # Save results
         output_file = os.path.join(OUTPUT_DIR, 'adaptive_thresholds_test.csv')
         df.to_csv(output_file)
-        print(f"Adaptive threshold test results have been saved to: {output_file}\n")
+        print(f"📁 Adaptive threshold test results saved to: {output_file}\n")
         
         return results_dict
     
@@ -1097,9 +1095,7 @@ class ExperimentEvaluator:
                                     param_name: str = 'tool_weight_sqlmap',
                                     param_range: List[float] = None) -> Dict:
         
-        print("\n" + "="*70)
         print(f"Parameter Sensitivity Analysis: {param_name}")
-        print("="*70)
         
         # Default parameter range
         if param_range is None:
@@ -1117,7 +1113,7 @@ class ExperimentEvaluator:
         results_dict = {}
         
         for param_value in param_range:
-            print(f"\n Test parameter values: {param_value}")
+            print(f"\nTest parameter values: {param_value}")
             
             # Temporary parameter modification
             if param_name == 'tool_weight_sqlmap':
@@ -1150,9 +1146,8 @@ class ExperimentEvaluator:
         f1_scores = df['f1_score'].values
         cv = np.std(f1_scores) / np.mean(f1_scores) * 100 if np.mean(f1_scores) > 0 else 0
         
-        print("\n" + "="*70)
+        print("\n")
         print(f"Results of Parameter Sensitivity Analysis: {param_name}")
-        print("="*70)
         print(df.to_string())
         print(f"\n F1-Score Coefficient of Variation (CV): {cv:.2f}%")
         print("(CV < 2.5% Indicates parameter robustness)")
@@ -1161,9 +1156,9 @@ class ExperimentEvaluator:
         # Save results
         output_file = os.path.join(OUTPUT_DIR, f'sensitivity_{param_name}.csv')
         df.to_csv(output_file)
-        print(f"Sensitivity analysis results have been saved to: {output_file}\n")
+        print(f"📁 Sensitivity analysis results saved to: {output_file}\n")
         
-        return {'results': results_dict, 'cv': cv}
+        return results_dict
     
     # ========================================================================
     # Complete Experimental Workflow
@@ -1200,17 +1195,7 @@ class ExperimentEvaluator:
             param_name='tool_weight_sqlmap'
         )
         
-        print("\n" + "="*70)
-        print("✓ All experiments completed！")
-        print("="*70)
-        print(f"\n The result file is saved in: {OUTPUT_DIR}")
-        print("  - confidence_distribution.csv")
-        print("  - individual_confidence_scores.csv") 
-        print("  - method_comparison.csv")
-        print("  - adaptive_thresholds_test.csv")
-        print("  - ablation_study.csv")
-        print("  - sensitivity_tool_weight_sqlmap.csv")
-        print("\n")
+        print("All experiments completed！")
         
         return {
             'confidence analysis':conf_analysis,
