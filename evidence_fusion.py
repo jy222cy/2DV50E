@@ -20,7 +20,7 @@ class EvidenceFusion:
     def __init__(self):
         # Feature weight vector (8 features)
         # [F1:Response Status Code, F2:Response Time, F3:Content Difference, F4:Vulnerability Type, 
-        #  F5:Payload Success Rate, F6:Database Fingerprint, F7:Data Extraction, F8:Sensitive Fields]
+        # F5:Payload Success Rate, F6:Database Fingerprint, F7:Data Extraction, F8:Sensitive Fields]
         self.feature_weights = np.array([0.10, 0.15, 0.20, 0.25, 0.15, 0.08, 0.05, 0.02])
         
         # Tool weights (based on historical accuracy)
@@ -106,6 +106,10 @@ class EvidenceFusion:
                 'consequence': 'Business Information Leakage'
             }
         }
+        
+        # Ablation study control flags (for disabling rules during experiments)
+        self._disable_rule2 = False  # Control flag for Rule 2 (Non-linear Divergence Penalty)
+        self._disable_rule4 = False  # Control flag for Rule 4 (Medical Risk Multiplicative Bonus)
     
     # ========================================================================
     # Evidence Collection and Fusion 
@@ -251,18 +255,19 @@ class EvidenceFusion:
             triggered_rules.append(f"Rule 1 - Consistency Reward: diff={diff:.3f} < {self.consistency_threshold}, "
                                 f"Confidence level × {1+self.consistency_bonus}")
         
-        # Rule 2: Non-linear Divergence Penalty (REVISED)
+        # Rule 2: Non-linear Divergence Penalty
         # Penalty increases quadratically with tool disagreement to handle borderline cases
-        if diff > 0:  # Always calculate penalty when there's any difference
-            # Quadratic penalty: penalty = (diff / baseline)^2 * max_penalty
-            baseline_diff = 0.30  # Baseline threshold for maximum penalty
-            max_penalty = 0.30    # Maximum penalty cap (30%)
-            penalty = min((diff / baseline_diff) ** 2 * 0.15, max_penalty)
-            
-            if penalty > 0.01:  # Only apply if penalty is significant (>1%)
-                c_adjusted *= (1 - penalty)
-                triggered_rules.append(f"Rule 2 - Non-linear Divergence Penalty: diff={diff:.3f}, "
-                                    f"penalty={penalty:.3f}, Confidence level × {1-penalty:.3f}")
+        if not getattr(self, '_disable_rule2', False):
+            if diff > 0:  # Always calculate penalty when there's any difference
+                # Quadratic penalty: penalty = (diff / baseline)^2 * max_penalty
+                baseline_diff = 0.30  # Baseline threshold for maximum penalty
+                max_penalty = 0.30    # Maximum penalty cap (30%)
+                penalty = min((diff / baseline_diff) ** 2 * 0.15, max_penalty)
+                
+                if penalty > 0.01:  # Only apply if penalty is significant (>1%)
+                    c_adjusted *= (1 - penalty)
+                    triggered_rules.append(f"Rule 2 - Non-linear Divergence Penalty: diff={diff:.3f}, "
+                                        f"penalty={penalty:.3f}, Confidence level × {1-penalty:.3f}")
         
         # Rule 3: Strong Evidence Boost
         # When explicit SQL error messages are detected, this constitutes strong evidence.
@@ -274,14 +279,15 @@ class EvidenceFusion:
                 triggered_rules.append(f"Rule 3 - Strong Evidence Boost: F3={max(features_sqlmap[2], features_zap[2]):.3f} > "
                                     f"{self.strong_evidence_threshold}, Confidence level increased to ≥ {self.strong_evidence_floor}")
         
-        # Rule 4: Medical Risk-Based Multiplicative Weighting (REVISED)
+        # Rule 4: Medical Risk-Based Multiplicative Weighting
         # L1/L2 modules receive multiplicative bonus based on risk severity
-        if module_risk_level in ['L1', 'L2']:
-            old_c = c_adjusted
-            c_adjusted *= (1 + self.healthcare_bonus)
-            c_adjusted = min(c_adjusted, 1.0)  # Cap at 1.0
-            triggered_rules.append(f"Rule 4 - Medical Risk Multiplicative Bonus: {module_risk_level}, "
-                                f"Confidence {old_c:.4f} × {1+self.healthcare_bonus} = {c_adjusted:.4f}")
+        if not getattr(self, '_disable_rule4', False):
+            if module_risk_level in ['L1', 'L2']:
+                old_c = c_adjusted
+                c_adjusted *= (1 + self.healthcare_bonus)
+                c_adjusted = min(c_adjusted, 1.0)  # Cap at 1.0
+                triggered_rules.append(f"Rule 4 - Medical Risk Multiplicative Bonus: {module_risk_level}, "
+                                    f"Confidence {old_c:.4f} × {1+self.healthcare_bonus} = {c_adjusted:.4f}")
         
         # Ensure that the confidence level falls within the range [0, 1].
         c_adjusted = max(0.0, min(1.0, c_adjusted))
@@ -1006,13 +1012,16 @@ class ExperimentEvaluator:
         
         # Temporary Disable Rule
         if rule_id == 1:  # Disable Consistency Rewards
-            self.fusion.consistency_threshold = -1  # Set to a value that cannot be triggered
-        elif rule_id == 2:  # Disable divergence penalties
-            self.fusion.divergence_threshold = 999  # Set to a value that cannot be triggered
+            self.fusion.consistency_threshold = -1
+            
+        elif rule_id == 2:  # Disable Non-linear Divergence Penalty (REVISED)
+            self.fusion._disable_rule2 = True  # Set disable flag
+            
         elif rule_id == 3:  # Disable Strong Evidence Boost
-            self.fusion.strong_evidence_threshold = 2.0  # Set to a value that cannot be triggered
-        elif rule_id == 4:  # Disable Medical Field Bonuses
-            self.fusion.healthcare_bonus = 0.0
+            self.fusion.strong_evidence_threshold = 2.0
+            
+        elif rule_id == 4:  # Disable Medical Risk Multiplicative Bonus (REVISED)
+            self.fusion._disable_rule4 = True  # Set disable flag
         
         # Operational Check
         results = self.run_batch_detection(test_cases, method='full')
@@ -1023,6 +1032,8 @@ class ExperimentEvaluator:
         self.fusion.divergence_threshold = original_divergence_threshold
         self.fusion.strong_evidence_threshold = original_strong_evidence_threshold
         self.fusion.healthcare_bonus = original_healthcare_bonus
+        self.fusion._disable_rule2 = False  # Clear flag
+        self.fusion._disable_rule4 = False  # Clear flag
         
         return metrics
     
