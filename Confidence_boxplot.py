@@ -23,19 +23,6 @@ false_positives = true_negatives_df[true_negatives_df['Confidence Score'] > 0.50
 # False Negatives: True Vulnerabilities with confidence < 0.50
 false_negatives = true_positives_df[true_positives_df['Confidence Score'] < 0.50]
 
-print("="*70)
-print("OUTLIER IDENTIFICATION")
-print("="*70)
-print(f"\n🚨 False Positives (Secure → High Confidence): {len(false_positives)} cases")
-if len(false_positives) > 0:
-    for idx, row in false_positives.iterrows():
-        print(f"   {row['Test_ID']}: confidence={row['Confidence Score']:.4f}")
-
-print(f"\n⚠️  False Negatives (Vulnerable → Low Confidence): {len(false_negatives)} cases")
-if len(false_negatives) > 0:
-    for idx, row in false_negatives.iterrows():
-        print(f"   {row['Test_ID']}: confidence={row['Confidence Score']:.4f}")
-
 # ============================================================================
 # Calculate Statistics
 # ============================================================================
@@ -47,9 +34,6 @@ tn_median = np.median(true_negatives)
 print(f"\n{'='*70}")
 print("DISTRIBUTION STATISTICS")
 print("="*70)
-print(f"True Vulnerabilities: Mean={tp_mean:.4f}, Median={tp_median:.4f}, n={len(true_positives)}")
-print(f"Secure Implementations: Mean={tn_mean:.4f}, Median={tn_median:.4f}, n={len(true_negatives)}")
-print(f"Confidence Gap: {tp_mean - tn_mean:.4f}")
 
 # ============================================================================
 # Create Box Plot with Journal Color Scheme
@@ -87,11 +71,17 @@ bp['boxes'][1].set_alpha(0.7)
 ax.axhline(y=0.50, color='gray', linestyle='--', linewidth=2, 
         label='Classification Threshold (0.50)', alpha=0.8, zorder=1)
 
-# Add mean value annotations
-ax.text(1, tp_mean + 0.05, f'μ={tp_mean:.3f}', 
-        ha='center', va='bottom', fontsize=11, fontweight='bold')
-ax.text(2, tn_mean - 0.05, f'μ={tn_mean:.3f}',  # Moved down to avoid overlap
-        ha='center', va='top', fontsize=11, fontweight='bold')
+# Left side (True Positives): Move UP to clear the blue box
+ax.text(1, tp_mean + 0.12, f'μ={tp_mean:.3f}', 
+        ha='center', va='bottom', fontsize=11, fontweight='bold',
+        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', 
+                edgecolor='darkblue', alpha=0.9))
+
+# Right side (True Negatives): Move DOWN to clear the orange box
+ax.text(2, tn_mean - 0.08, f'μ={tn_mean:.3f}', 
+        ha='center', va='top', fontsize=11, fontweight='bold',
+        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', 
+                edgecolor='darkorange', alpha=0.9))
 
 # ============================================================================
 # Annotate FALSE POSITIVES (Red markers with TCID labels)
@@ -146,8 +136,13 @@ for i, (idx, row) in enumerate(fn_sorted.iterrows()):
         label_x = 1.08
         label_ha = 'left'
     
+    if tcid == 'TC030':
+        label_y = conf + 0.04  # Move up by 0.04 units
+    else:
+        label_y = conf  # Keep original position
+    
     # Add TCID label
-    ax.text(label_x, conf, f'{tcid}', 
+    ax.text(label_x, label_y, f'{tcid}', 
         fontsize=9, color='navy', 
         weight='bold', ha=label_ha, va='center',
         bbox=dict(boxstyle='round,pad=0.3', 
@@ -224,13 +219,3 @@ summary_stats = pd.DataFrame({
 
 summary_stats.to_csv('C:/Users/jiani/Desktop/Degree Project/2DV50E/outputs/Experiment_1/confidence_summary_statistics.csv', index=False)
 print(f"✅ Summary statistics saved: C:/Users/jiani/Desktop/Degree Project/2DV50E/outputs/Experiment_1/confidence_summary_statistics.csv")
-
-print("\n" + "="*70)
-print("Distribution Summary:")
-print("="*70)
-print(summary_stats.to_string(index=False))
-print("\n" + "="*70)
-print(f"Total Outliers: {len(false_positives) + len(false_negatives)}")
-print(f"  - False Positives: {len(false_positives)}")
-print(f"  - False Negatives: {len(false_negatives)}")
-print("="*70)
