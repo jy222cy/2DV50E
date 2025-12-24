@@ -123,17 +123,6 @@ if fpr_change[2] < 0:
                 bbox=dict(boxstyle='round,pad=0.4', facecolor='lightgreen', 
                         edgecolor='green', alpha=0.8))
 
-# L4 Warning: Recall dropped significantly
-if recall_change[3] < -30:
-    ax2.annotate(f'⚠ Recall Collapsed\n80%→40%', 
-                xy=(3, recall_adaptive[3]),
-                xytext=(3, recall_adaptive[3] + 25),
-                fontsize=10, fontweight='bold', color='darkred',
-                arrowprops=dict(arrowstyle='->', color='red', lw=2.5),
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='yellow', 
-                        edgecolor='red', linewidth=2, alpha=0.9),
-                ha='center')
-
 # ============================================================================
 # Styling and Layout
 # ============================================================================
@@ -178,13 +167,6 @@ if fpr_change[0] == 0 and fpr_change[1] == 0:
     print(f"   L2 Recall: {recall_standard[1]:.0f}% → {recall_adaptive[1]:.0f}%")
     print(f"   Reason: High-confidence cases already correctly classified")
 
-# Warning for L4
-if recall_change[3] < -30:
-    print(f"\n⚠ L4 (Medium Risk): CRITICAL TRADE-OFF ISSUE")
-    print(f"   FPR: {fpr_standard[3]:.1f}% → {fpr_adaptive[3]:.1f}% (no improvement)")
-    print(f"   Recall: {recall_standard[3]:.0f}% → {recall_adaptive[3]:.0f}% (⬇️ {abs(recall_change[3]):.0f}%)")
-    print(f"   ❌ Threshold 0.60 too conservative - missed half of vulnerabilities")
-    print(f"   Recommendation: Recalibrate L4 threshold to ~0.52")
 
 # Visualize trade-off
 print("\n" + "="*70)

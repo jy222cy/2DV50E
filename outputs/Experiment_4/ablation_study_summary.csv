@@ -1,9 +1,0 @@
-Rule,F1_Drop(%),Impact_Category,Interpretation
-"Rule 1
-Consistency Reward",4.79,Moderate (3-15%),Essential component - largest performance contributor
-"Rule 2
-Divergence Penalty",0,None (<3%),Minimal impact - improves consistency in edge cases
-"Rule 3
-Strong Evidence Boost",20.27,Critical (>15%),No observable effect - may indicate threshold issues
-"Rule 4
-Medical Field Bonus",0,None (<3%),No observable effect - medical scenarios underrepresented
