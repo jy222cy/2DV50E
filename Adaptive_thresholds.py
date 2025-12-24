@@ -114,10 +114,14 @@ ax2.tick_params(axis='y', labelcolor='darkred', labelsize=11)
 # ============================================================================
 # L3 Success: FPR reduction
 if fpr_change[2] < 0:
-    improvement_pct = abs(fpr_change[2]) / fpr_standard[2] * 100
-    ax1.annotate(f'↓{improvement_pct:.0f}% FPR', 
+    fpr_std_rounded = round(fpr_standard[2], 1)  # 33.3
+    fpr_adp_rounded = round(fpr_adaptive[2], 1)  # 16.7
+    absolute_reduction = fpr_std_rounded - fpr_adp_rounded  # 16.6
+    
+    # Move annotation DOWN: change y position from fpr_adaptive[2] + 6 to fpr_adaptive[2] - 8
+    ax1.annotate(f'↓{absolute_reduction:.1f} FPR',  # Displays 16.6 
                 xy=(2 + width/2, fpr_adaptive[2]),
-                xytext=(2 + width/2 + 0.35, fpr_adaptive[2] + 6),
+                xytext=(2 + width/2 + 0.35, fpr_adaptive[2] - 8),  # ← Moved DOWN by 14 units
                 fontsize=11, fontweight='bold', color='green',
                 arrowprops=dict(arrowstyle='->', color='green', lw=2.5),
                 bbox=dict(boxstyle='round,pad=0.4', facecolor='lightgreen', 
@@ -146,54 +150,3 @@ jpg_file = OUTPUT_DIR / 'adaptive_thresholds.jpg'
 plt.savefig(jpg_file, dpi=300, bbox_inches='tight')
 
 print(f"\n✅ Saved JPG: {jpg_file}")
-
-# ==============================================================================
-# Console Output
-# ==============================================================================
-print("\n" + "="*70)
-print("KEY FINDINGS (DUAL-AXIS ANALYSIS)")
-print("="*70)
-
-# Highlight L3 success
-l3_improvement = abs(fpr_change[2]) / fpr_standard[2] * 100
-print(f"⭐ L3 (High Risk): FPR reduced by {l3_improvement:.1f}% (33.33% → 16.67%)")
-print(f"   Recall unchanged: {recall_standard[2]:.0f}% → {recall_adaptive[2]:.0f}%")
-print(f"   ✅ OPTIMAL TRADE-OFF: Lower FPR without sacrificing detection")
-
-# Explain L1/L2 no change
-if fpr_change[0] == 0 and fpr_change[1] == 0:
-    print(f"\n✓ L1/L2 (Critical/Severe): No FPR change")
-    print(f"   L1 Recall: {recall_standard[0]:.0f}% → {recall_adaptive[0]:.0f}% (Perfect detection)")
-    print(f"   L2 Recall: {recall_standard[1]:.0f}% → {recall_adaptive[1]:.0f}%")
-    print(f"   Reason: High-confidence cases already correctly classified")
-
-
-# Visualize trade-off
-print("\n" + "="*70)
-print("TRADE-OFF MATRIX")
-print("="*70)
-print("Level | FPR Change | Recall Change | Assessment")
-print("------|------------|---------------|------------")
-for i, level in enumerate(risk_levels):
-    fpr_arrow = "⬇️" if fpr_change[i] < 0 else "➡️" if fpr_change[i] == 0 else "⬆️"
-    recall_arrow = "⬇️" if recall_change[i] < 0 else "➡️" if recall_change[i] == 0 else "⬆️"
-    
-    if fpr_change[i] < 0 and recall_change[i] >= 0:
-        assessment = "✅ SUCCESS"
-    elif fpr_change[i] == 0 and recall_change[i] >= 0:
-        assessment = "✓ STABLE"
-    elif recall_change[i] < -30:
-        assessment = "❌ FAILURE"
-    else:
-        assessment = "⚠ REVIEW"
-    
-    print(f"{level:5} | {fpr_arrow:2} {fpr_change[i]:+6.1f}% | {recall_arrow:2} {recall_change[i]:+6.0f}%  | {assessment}")
-
-print("\n" + "="*70)
-print("DUAL-AXIS VISUALIZATION COMPLETE")
-print("="*70)
-print("The chart now shows:")
-print("  📊 LEFT AXIS (Blue): False Positive Rate (bars)")
-print("  📈 RIGHT AXIS (Red): Recall (lines)")
-print("  ➡️ Enables direct visual comparison of FPR-Recall trade-offs")
-print("="*70)
