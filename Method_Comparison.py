@@ -18,9 +18,6 @@ fnr_rates = (df['fnr'] * 100).tolist()
 print("="*70)
 print("Real Experimental Data Loaded:")
 print("="*70)
-for i, method in enumerate(methods):
-    print(f"{method:30s} | F1={f1_scores[i]:5.2f}% | FPR={fpr_rates[i]:5.2f}%")
-print("="*70)
 
 # ============================================================================
 # Create Figure with Journal Color Scheme
@@ -175,9 +172,3 @@ stats_df = pd.DataFrame({
 stats_file = 'C:/Users/jiani/Desktop/Degree Project/2DV50E/outputs/Experiment_2/method_comparison_statistics.csv'
 stats_df.to_csv(stats_file, index=False)
 print(f"✅ Detailed statistics saved: {stats_file}")
-
-print("\n" + "="*70)
-print("Performance Summary:")
-print("="*70)
-print(stats_df.to_string(index=False))
-print("="*70)
