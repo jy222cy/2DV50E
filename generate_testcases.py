@@ -1871,23 +1871,23 @@ def generate_test_cases():
         },
         "sqlmap_result": {
             "status_code": 200,
-            "delay_time": 5.5,
-            "error_keywords": ["SELECT", "FROM", "database", "query", "result"],
-            "vulnerability_type": "Error-based",
-            "successful_payloads": 14,
+            "delay_time": 2.5,
+            "error_keywords": [],
+            "vulnerability_type": "",
+            "successful_payloads": 3,
             "total_payloads": 20,
-            "dbms_detected": True,
-            "data_dumped": True,
+            "dbms_detected": False,
+            "data_dumped": False,
             "parameter_name": "room_number"
         },
         "zap_result": {
             "status_code": 200,
             "response_time": 335,
             "content_length_change": 0.48,
-            "alert_level": "High",
-            "triggered_rules": 9,
+            "alert_level": "Low",
+            "triggered_rules": 3,
             "total_rules": 10,
-            "dbms_detected": True,
+            "dbms_detected": False,
             "parameter_name": "room_number"
         }
     }
@@ -2177,7 +2177,7 @@ def save_test_cases(output_file="medical_sql_injection_testcases.json"):
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(test_cases, f, indent=2, ensure_ascii=False)
     
-    print(f"\n The test case has been saved to: {output_file}")
+    print(f"\nThe test case has been saved to: {output_file}")
 
 if __name__ == "__main__":
     save_test_cases()

@@ -1944,29 +1944,23 @@
       },
       "sqlmap_result": {
         "status_code": 200,
-        "delay_time": 5.5,
-        "error_keywords": [
-          "SELECT",
-          "FROM",
-          "database",
-          "query",
-          "result"
-        ],
-        "vulnerability_type": "Error-based",
-        "successful_payloads": 14,
+        "delay_time": 2.5,
+        "error_keywords": [],
+        "vulnerability_type": "",
+        "successful_payloads": 3,
         "total_payloads": 20,
-        "dbms_detected": true,
-        "data_dumped": true,
+        "dbms_detected": false,
+        "data_dumped": false,
         "parameter_name": "room_number"
       },
       "zap_result": {
         "status_code": 200,
         "response_time": 335,
         "content_length_change": 0.48,
-        "alert_level": "High",
-        "triggered_rules": 9,
+        "alert_level": "Low",
+        "triggered_rules": 3,
         "total_rules": 10,
-        "dbms_detected": true,
+        "dbms_detected": false,
         "parameter_name": "room_number"
       }
     },

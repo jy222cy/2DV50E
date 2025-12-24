@@ -64,7 +64,7 @@ class EvidenceFusion:
                 'description': 'Medium Risk'
             },
             'L4': { # Low Risk Modules (Registration, Scheduling, Inventory)
-                'high': 0.60,
+                'high': 0.52,
                 'medium': 0.45,
                 'sla_high': '3days',
                 'sla_medium': '2weeks',
