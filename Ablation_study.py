@@ -92,9 +92,9 @@ ax.spines['right'].set_visible(False)
 
 # Add legend
 legend_elements = [
-    plt.Rectangle((0,0),1,1, fc=COLOR_SIGNIFICANT, ec='black', label='Critical Impact (>15%)'),
-    plt.Rectangle((0,0),1,1, fc=COLOR_MODERATE, ec='black', label='Moderate Impact (3-15%)'),
-    plt.Rectangle((0,0),1,1, fc=COLOR_NONE, ec='black', label='No Impact (<3%)')
+    plt.Rectangle((0,0),1,1, fc=COLOR_SIGNIFICANT, ec='black', label='Critical Impact (>10%)'),
+    plt.Rectangle((0,0),1,1, fc=COLOR_MODERATE, ec='black', label='Moderate Impact (2-10%)'),
+    plt.Rectangle((0,0),1,1, fc=COLOR_NONE, ec='black', label='No Impact (<2%)')
 ]
 ax.legend(handles=legend_elements, loc='lower right', fontsize=10, framealpha=0.9)
 
@@ -105,71 +105,3 @@ jpg_file = OUTPUT_DIR / 'ablation_study.jpg'
 plt.savefig(jpg_file, dpi=300, bbox_inches='tight')
 
 print(f"\n✅ Saved JPG: {jpg_file}")
-
-
-# ==============================================================================
-# Generate Summary Statistics
-# ==============================================================================
-summary_data = {
-    'Rule': rules,
-    'F1_Drop(%)': [f"{x:.2f}" for x in f1_drops],
-    'Impact_Category': [
-        'Critical (>15%)' if x > 15 else 
-        'Moderate (3-15%)' if x >= 3 else 
-        'None (<3%)'
-        for x in f1_drops
-    ],
-    'Interpretation': [
-        'Essential component - largest performance contributor',
-        'Minimal impact - improves consistency in edge cases',
-        'No observable effect - may indicate threshold issues',
-        'No observable effect - medical scenarios underrepresented'
-    ]
-}
-
-summary_df = pd.DataFrame(summary_data)
-summary_csv = OUTPUT_DIR / 'ablation_study_summary.csv'
-summary_df.to_csv(summary_csv, index=False)
-print(f"✅ Saved Summary: {summary_csv}")
-
-# ==============================================================================
-# Console Output
-# ==============================================================================
-print("\n" + "="*70)
-print("ABLATION STUDY RESULTS")
-print("="*70)
-print(summary_df.to_string(index=False))
-
-print("\n" + "="*70)
-print("KEY FINDINGS")
-print("="*70)
-
-# Critical component
-max_drop = max(f1_drops)
-max_rule = rules[f1_drops.index(max_drop)]
-print(f"🔴 {max_rule.replace(chr(10), ' ')}: {max_drop:.2f}% drop")
-print(f"   → CRITICAL component: Without strong evidence detection,")
-print(f"     system cannot distinguish high-confidence SQL errors from ambiguous signals")
-print(f"   → This rule enforces minimum 0.80 confidence when SQL errors detected")
-
-# Moderate component
-moderate_drops = [(r, d) for r, d in zip(rules, f1_drops) if 3 <= d < 15]
-if moderate_drops:
-    for rule, drop in moderate_drops:
-        print(f"\n🟠 {rule.replace(chr(10), ' ')}: {drop:.2f}% drop")
-        print(f"   → Moderate impact: Helps in borderline cases near 0.50 threshold")
-
-# Zero-impact components
-zero_drops = [(r, d) for r, d in zip(rules, f1_drops) if d < 3]
-if zero_drops:
-    print(f"\n🔵 Zero-Impact Rules:")
-    for rule, drop in zero_drops:
-        print(f"   • {rule.replace(chr(10), ' ')}: {drop:.2f}% drop")
-    print(f"   → Possible reasons:")
-    print(f"     (1) Test cases lack scenarios where these rules trigger")
-    print(f"     (2) Other rules already capture similar patterns")
-    print(f"     (3) Parameters need recalibration based on this finding")
-
-print("\n" + "="*70)
-print("VISUALIZATION COMPLETE")
-print("="*70)
