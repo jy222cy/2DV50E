@@ -31,12 +31,13 @@ class EvidenceFusion:
         
         # Heuristic rule parameters
         self.consistency_threshold = 0.15  # Consistency Determination Threshold
-        self.divergence_threshold = 0.30   # Divergence Threshold
+        self.divergence_threshold = 0.30   # Reference threshold for non-linear divergence penalty
         self.consistency_bonus = 0.10      # Consistency Bonus Coefficient (10%)
-        self.divergence_penalty = 0.15     # Divergence Penalty Coefficient (15%)
+        self.divergence_penalty_base = 0.15  # Base Divergence Penalty Coefficient (15%)
+        self.divergence_penalty_max = 0.25   # Maximum Divergence Penalty (25%)
         self.strong_evidence_threshold = 0.8  # Strong Evidence Threshold
         self.strong_evidence_floor = 0.80  # Lower Bound of Evidence Credibility
-        self.healthcare_bonus = 0.08       # Medical Field Bonus
+        self.medical_risk_bonus = 0.55     # Medical Risk Multiplicative Bonus (55%, increased to fix FN cases)
         
         # Adaptive thresholds for medical scenarios
         # This is a core innovation of my thesis!
@@ -255,14 +256,17 @@ class EvidenceFusion:
             triggered_rules.append(f"Rule 1 - Consistency Reward: diff={diff:.3f} < {self.consistency_threshold}, "
                                 f"Confidence level × {1+self.consistency_bonus}")
         
-        # Rule 2: Non-linear Divergence Penalty
-        # Penalty increases quadratically with tool disagreement to handle borderline cases
+        # Rule 2: Non-linear Divergence Penalty (IMPROVED)
+        # Only penalize significant tool disagreements to avoid false negatives
         if not getattr(self, '_disable_rule2', False):
-            if diff > 0:  # Always calculate penalty when there's any difference
-                # Quadratic penalty: penalty = (diff / baseline)^2 * max_penalty
-                baseline_diff = 0.30  # Baseline threshold for maximum penalty
-                max_penalty = 0.30    # Maximum penalty cap (30%)
-                penalty = min((diff / baseline_diff) ** 2 * 0.15, max_penalty)
+            penalty_threshold = 0.20  # Only penalize when diff > 0.20
+            if diff > penalty_threshold:
+                # Linear penalty for better control: penalty = (diff - threshold) / range * max_penalty
+                baseline_diff = 0.50  # Full penalty at diff = 0.50
+                max_penalty = 0.15    # Maximum penalty cap (15%, reduced from 30%)
+                
+                # Calculate linear penalty
+                penalty = min((diff - penalty_threshold) / (baseline_diff - penalty_threshold) * max_penalty, max_penalty)
                 
                 if penalty > 0.01:  # Only apply if penalty is significant (>1%)
                     c_adjusted *= (1 - penalty)
@@ -284,10 +288,10 @@ class EvidenceFusion:
         if not getattr(self, '_disable_rule4', False):
             if module_risk_level in ['L1', 'L2']:
                 old_c = c_adjusted
-                c_adjusted *= (1 + self.healthcare_bonus)
+                c_adjusted *= (1 + self.medical_risk_bonus)
                 c_adjusted = min(c_adjusted, 1.0)  # Cap at 1.0
                 triggered_rules.append(f"Rule 4 - Medical Risk Multiplicative Bonus: {module_risk_level}, "
-                                    f"Confidence {old_c:.4f} × {1+self.healthcare_bonus} = {c_adjusted:.4f}")
+                                    f"Confidence {old_c:.4f} × {1+self.medical_risk_bonus} = {c_adjusted:.4f}")
         
         # Ensure that the confidence level falls within the range [0, 1].
         c_adjusted = max(0.0, min(1.0, c_adjusted))
@@ -565,7 +569,8 @@ class EvidenceFusion:
         
         # ========== Step 4: Apply heuristic rules ==========
         c_final, triggered_rules = self.apply_heuristic_rules(
-            c_base, s_sqlmap, s_zap, features_sqlmap, features_zap
+            c_base, s_sqlmap, s_zap, features_sqlmap, features_zap,
+            module_risk_level = module_info.get('risk_level')
         )
         
         if verbose:
@@ -650,7 +655,7 @@ class ExperimentEvaluator:
             'feature_weights': self.fusion.feature_weights.copy(),
             'consistency_threshold': self.fusion.consistency_threshold,
             'divergence_threshold': self.fusion.divergence_threshold,
-            'healthcare_bonus': self.fusion.healthcare_bonus
+            'medical_risk_bonus': self.fusion.medical_risk_bonus
         }
     
     # ========================================================================
@@ -1008,7 +1013,7 @@ class ExperimentEvaluator:
         original_consistency_threshold = self.fusion.consistency_threshold
         original_divergence_threshold = self.fusion.divergence_threshold
         original_strong_evidence_threshold = self.fusion.strong_evidence_threshold
-        original_healthcare_bonus = self.fusion.healthcare_bonus
+        original_medical_risk_bonus = self.fusion.medical_risk_bonus
         
         # Temporary Disable Rule
         if rule_id == 1:  # Disable Consistency Rewards
@@ -1031,7 +1036,7 @@ class ExperimentEvaluator:
         self.fusion.consistency_threshold = original_consistency_threshold
         self.fusion.divergence_threshold = original_divergence_threshold
         self.fusion.strong_evidence_threshold = original_strong_evidence_threshold
-        self.fusion.healthcare_bonus = original_healthcare_bonus
+        self.fusion.medical_risk_bonus = original_medical_risk_bonus
         self.fusion._disable_rule2 = False  # Clear flag
         self.fusion._disable_rule4 = False  # Clear flag
         
@@ -1116,8 +1121,8 @@ class ExperimentEvaluator:
                 param_range = [0.10, 0.125, 0.15, 0.175, 0.20]
             elif param_name == 'divergence_threshold':
                 param_range = [0.25, 0.30, 0.35, 0.40, 0.45]
-            elif param_name == 'healthcare_bonus':
-                param_range = [0.00, 0.03, 0.05, 0.08, 0.10, 0.12]
+            elif param_name == 'medical_risk_bonus':
+                param_range = [0.00, 0.05, 0.10, 0.15, 0.20, 0.25]
             else:
                 raise ValueError(f"Unknown parameter: {param_name}")
         
@@ -1134,8 +1139,8 @@ class ExperimentEvaluator:
                 self.fusion.consistency_threshold = param_value
             elif param_name == 'divergence_threshold':
                 self.fusion.divergence_threshold = param_value
-            elif param_name == 'healthcare_bonus':
-                self.fusion.healthcare_bonus = param_value
+            elif param_name == 'medical_risk_bonus':
+                self.fusion.medical_risk_bonus = param_value
             
             # Operational Check
             results = self.run_batch_detection(test_cases, method='full')
@@ -1147,7 +1152,7 @@ class ExperimentEvaluator:
         self.fusion.tool_weights = self.original_params['tool_weights'].copy()
         self.fusion.consistency_threshold = self.original_params['consistency_threshold']
         self.fusion.divergence_threshold = self.original_params['divergence_threshold']
-        self.fusion.healthcare_bonus = self.original_params['healthcare_bonus']
+        self.fusion.medical_risk_bonus = self.original_params['medical_risk_bonus']
         
         # Create a comparison table
         df = pd.DataFrame.from_dict(results_dict, orient='index')
