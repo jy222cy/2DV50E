@@ -1598,10 +1598,10 @@ def generate_test_cases():
         },
         "sqlmap_result": {
             "status_code": 200,
-            "delay_time": 0.2,
-            "error_keywords": [],
+            "delay_time": 5.8,
+            "error_keywords": ["MySQL","syntax error","query"],
             "vulnerability_type": "",
-            "successful_payloads": 0,
+            "successful_payloads": 9,
             "total_payloads": 20,
             "dbms_detected": False,
             "data_dumped": False,
@@ -1609,10 +1609,10 @@ def generate_test_cases():
         },
         "zap_result": {
             "status_code": 200,
-            "response_time": 150,
-            "content_length_change": 0.01,
-            "alert_level": "Informational",
-            "triggered_rules": 0,
+            "response_time": 400,
+            "content_length_change": 0.3,
+            "alert_level": "High",
+            "triggered_rules": 5,
             "total_rules": 10,
             "dbms_detected": False,
             "parameter_name": "prescription_id"

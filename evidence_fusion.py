@@ -50,7 +50,7 @@ class EvidenceFusion:
                 'description': 'Fatal Risk - Directly Threatening the Patient Life'
             },
             'L2': { # High Risk Module (Patient Information, Medical Records, Authentication)
-                'high': 0.50,
+                'high': 0.42,
                 'medium': 0.35,
                 'sla_high': '12h',
                 'sla_medium': '48h',
