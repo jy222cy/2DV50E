@@ -64,18 +64,28 @@ bars2 = ax1.bar(x + width/2, fpr_adaptive, width,
             color=COLOR_ADAPTIVE, edgecolor='black', linewidth=1.2, alpha=0.7)
 
 # Add value labels on bars
-for bars in [bars1, bars2]:
-    for bar in bars:
+for idx, bars in enumerate([bars1, bars2]):
+    for bar_idx, bar in enumerate(bars):
         height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.1f}%',
-                ha='center', va='bottom', fontsize=9, fontweight='bold')
+        
+        if bar_idx == 2 and idx == 0:
+            ax1.text(bar.get_x() + bar.get_width()/2., height * 0.5,
+                    f'{height:.1f}%',
+                    ha='center', va='center', fontsize=10, fontweight='bold',
+                    color='white', zorder=10,
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='navy', 
+                            edgecolor='white', linewidth=1.5, alpha=0.9))
+        else:
+            ax1.text(bar.get_x() + bar.get_width()/2., height + 1.5,
+                    f'{height:.1f}%',
+                    ha='center', va='bottom', fontsize=10, fontweight='bold',
+                    zorder=10)
 
 # Left Y-axis styling
-ax1.set_xlabel('Medical Risk Level', fontsize=13, fontweight='bold')
-ax1.set_ylabel('False Positive Rate (%)', fontsize=13, fontweight='bold', color='tab:blue')
-ax1.set_ylim(0, max(max(fpr_standard), max(fpr_adaptive)) * 1.35)
-ax1.tick_params(axis='y', labelcolor='tab:blue', labelsize=11)
+ax1.set_xlabel('Medical Risk Level', fontsize=14, fontweight='bold')
+ax1.set_ylabel('False Positive Rate (%)', fontsize=14, fontweight='bold', color='tab:blue')
+ax1.set_ylim(0, 65)
+ax1.tick_params(axis='y', labelcolor='tab:blue', labelsize=12)
 ax1.grid(axis='y', alpha=0.3, linestyle='--', linewidth=0.8)
 
 # ============================================================================
@@ -87,61 +97,75 @@ ax2 = ax1.twinx()
 line1 = ax2.plot(x, recall_standard, 'o-', 
                 color='green', linewidth=2.5, markersize=10, 
                 markeredgecolor='darkgreen', markeredgewidth=2,
-                label='Recall - Standard Threshold', alpha=0.9, zorder=5)
+                label='Recall - Standard Threshold', alpha=0.85, zorder=3)
 line2 = ax2.plot(x, recall_adaptive, 's--', 
                 color='red', linewidth=2.5, markersize=9, 
                 markeredgecolor='darkred', markeredgewidth=2,
-                label='Recall - Adaptive Threshold', alpha=0.9, zorder=5)
+                label='Recall - Adaptive Threshold', alpha=0.85, zorder=3)
 
 # Add value labels on line markers
 for i, (std, adp) in enumerate(zip(recall_standard, recall_adaptive)):
-    # Standard recall (green)
-    ax2.text(i, std + 3, f'{std:.0f}%', 
-            ha='center', va='bottom', fontsize=10, 
-            fontweight='bold', color='darkgreen')
-    # Adaptive recall (red)
-    ax2.text(i, adp - 3, f'{adp:.0f}%', 
-            ha='center', va='top', fontsize=10, 
-            fontweight='bold', color='darkred')
+    if i == 1:  # L2
+        # Standard recall (green)
+        ax2.text(i - 0.12, std - 4.5, f'{std:.1f}%', 
+                ha='center', va='top', fontsize=10, 
+                fontweight='bold', color='darkgreen', zorder=10,
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='lightgreen', 
+                        edgecolor='darkgreen', alpha=0.85))
+        # Adaptive recall (red)
+        ax2.text(i + 0.12, adp + 1.5, f'{adp:.1f}%', 
+                ha='center', va='bottom', fontsize=10, 
+                fontweight='bold', color='darkred', zorder=10,
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='lightcoral', 
+                        edgecolor='darkred', alpha=0.85))
+    else:
+        # Standard recall (green)
+        ax2.text(i, std + 3, f'{std:.1f}%', 
+                ha='center', va='bottom', fontsize=10, 
+                fontweight='bold', color='darkgreen', zorder=10)
+        # Adaptive recall (red)
+        ax2.text(i, adp - 3, f'{adp:.1f}%', 
+                ha='center', va='top', fontsize=10, 
+                fontweight='bold', color='darkred', zorder=10)
 
 # Right Y-axis styling
-ax2.set_ylabel('Recall (%)', fontsize=13, fontweight='bold', color='darkred')
-ax2.set_ylim(0, 110)
-ax2.tick_params(axis='y', labelcolor='darkred', labelsize=11)
+ax2.set_ylabel('Recall (%)', fontsize=14, fontweight='bold', color='darkred')
+ax2.set_ylim(0, 115)
+ax2.tick_params(axis='y', labelcolor='darkred', labelsize=12)
 
 # ============================================================================
-# Annotations
+# Annotations - L3 Success: FPR reduction
 # ============================================================================
-# L3 Success: FPR reduction
+fpr_change = [adp - std for std, adp in zip(fpr_standard, fpr_adaptive)]
 if fpr_change[2] < 0:
-    fpr_std_rounded = round(fpr_standard[2], 1)  # 33.3
-    fpr_adp_rounded = round(fpr_adaptive[2], 1)  # 16.7
-    absolute_reduction = fpr_std_rounded - fpr_adp_rounded  # 16.6
+    fpr_std_rounded = round(fpr_standard[2], 1)
+    fpr_adp_rounded = round(fpr_adaptive[2], 1)
+    absolute_reduction = fpr_std_rounded - fpr_adp_rounded
     
-    # Move annotation DOWN: change y position from fpr_adaptive[2] + 6 to fpr_adaptive[2] - 8
-    ax1.annotate(f'↓{absolute_reduction:.1f} FPR',  # Displays 16.6 
+    ax1.annotate(f'↓{absolute_reduction:.1f} FPR',
                 xy=(2 + width/2, fpr_adaptive[2]),
-                xytext=(2 + width/2 + 0.35, fpr_adaptive[2] - 8),  # ← Moved DOWN by 14 units
+                xytext=(2.5, 10),
                 fontsize=11, fontweight='bold', color='green',
                 arrowprops=dict(arrowstyle='->', color='green', lw=2.5),
-                bbox=dict(boxstyle='round,pad=0.4', facecolor='lightgreen', 
-                        edgecolor='green', alpha=0.8))
+                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', 
+                        edgecolor='green', linewidth=2, alpha=0.9),
+                zorder=10)
 
 # ============================================================================
 # Styling and Layout
 # ============================================================================
 ax1.set_title('Adaptive Threshold Effectiveness: FPR vs Recall Trade-off\nAcross Medical Risk Levels',
-            fontsize=14, fontweight='bold', pad=20)
+            fontsize=15, fontweight='bold', pad=20)
 ax1.set_xticks(x)
-ax1.set_xticklabels(risk_labels, fontsize=11)
+ax1.set_xticklabels(risk_labels, fontsize=12, fontweight='bold')
 ax1.spines['top'].set_visible(False)
 
 # Combine legends from both axes
 lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 ax1.legend(lines1 + lines2, labels1 + labels2, 
-        loc='upper right', fontsize=10, framealpha=0.95,
-        title='Metrics', title_fontsize=11)
+        loc='upper right', fontsize=11, framealpha=0.95,
+        title='Metrics', title_fontsize=12, edgecolor='black', fancybox=True)
 
 plt.tight_layout()
 

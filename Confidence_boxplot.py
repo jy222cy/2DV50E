@@ -198,24 +198,6 @@ plt.tight_layout()
 # ============================================================================
 output_path = 'C:/Users/jiani/Desktop/Degree Project/2DV50E/outputs/Experiment_1/confidence_boxplot.jpg'
 plt.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white')
-print(f"\n✅ Box plot with outlier annotations saved: {output_path}")
+print(f"\n✅ Box plot saved: {output_path}")
 
 plt.close()
-
-# ============================================================================
-# Generate Summary Statistics Table
-# ============================================================================
-summary_stats = pd.DataFrame({
-    'Category': ['True Vulnerabilities', 'Secure Implementations'],
-    'N': [len(true_positives), len(true_negatives)],
-    'Mean': [tp_mean, tn_mean],
-    'Median': [tp_median, tn_median],
-    'Std': [np.std(true_positives), np.std(true_negatives)],
-    'Min': [np.min(true_positives), np.min(true_negatives)],
-    'Max': [np.max(true_positives), np.max(true_negatives)],
-    'Q1': [np.percentile(true_positives, 25), np.percentile(true_negatives, 25)],
-    'Q3': [np.percentile(true_positives, 75), np.percentile(true_negatives, 75)]
-})
-
-summary_stats.to_csv('C:/Users/jiani/Desktop/Degree Project/2DV50E/outputs/Experiment_1/confidence_summary_statistics.csv', index=False)
-print(f"✅ Summary statistics saved: C:/Users/jiani/Desktop/Degree Project/2DV50E/outputs/Experiment_1/confidence_summary_statistics.csv")

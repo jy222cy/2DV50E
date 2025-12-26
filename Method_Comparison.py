@@ -156,19 +156,3 @@ print(f"\n✅ Method comparison chart saved:")
 print(f"  JPG: {output_jpg}")
 
 plt.close()
-
-# ============================================================================
-# Generate Detailed Statistics Table
-# ============================================================================
-stats_df = pd.DataFrame({
-'Method': methods,
-'Precision (%)': [f'{p:.2f}' for p in precision],
-'Recall (%)': [f'{r:.2f}' for r in recall],
-'F1-Score (%)': [f'{f:.2f}' for f in f1_scores],
-'FPR (%)': [f'{fpr:.2f}' for fpr in fpr_rates],
-'FNR (%)': [f'{fnr:.2f}' for fnr in fnr_rates]
-})
-
-stats_file = 'C:/Users/jiani/Desktop/Degree Project/2DV50E/outputs/Experiment_2/method_comparison_statistics.csv'
-stats_df.to_csv(stats_file, index=False)
-print(f"✅ Detailed statistics saved: {stats_file}")
