@@ -1,6 +1,5 @@
 ,precision,recall,f1_score,fpr,fnr,F1_drop
-Full Method (Baseline),0.8667,0.8125,0.8387,0.1739,0.1875,0
-Without Rule 1 (Consistency Reward),0.8889,0.75,0.8136,0.1304,0.25,2.51
-Without Rule 2 (Divergence Penalty),0.871,0.8438,0.8571,0.1739,0.1562,-1.84
-Without Rule 3 (Enhanced Strong Evidence),0.84,0.6562,0.7368,0.1739,0.3438,10.19
-Without Rule 4 (Medical Field Bonus),0.8621,0.7812,0.8197,0.1739,0.2188,1.9
+Full Method (Baseline),0.871,0.8438,0.8571,0.1739,0.1562,0.0
+Without Rule 1 (Consistency Reward),0.8929,0.7812,0.8333,0.1304,0.2188,2.38
+Without Rule 2 (Strong Evidence Boost),0.8519,0.7188,0.7797,0.1739,0.2812,7.74
+Without Rule 3 (Medical Risk Bonus),0.8621,0.7812,0.8197,0.1739,0.2188,3.74

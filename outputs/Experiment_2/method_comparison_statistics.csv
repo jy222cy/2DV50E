@@ -1,6 +1,0 @@
-Method,Precision (%),Recall (%),F1-Score (%),FPR (%),FNR (%)
-SQLMap Only,84.00,65.62,73.68,17.39,34.38
-ZAP Only,90.00,56.25,69.23,8.70,43.75
-Simple Average,80.00,37.50,51.06,13.04,62.50
-Weighted Fusion,81.25,40.62,54.17,13.04,59.38
-Fusion + Heuristics (Full),86.67,81.25,83.87,17.39,18.75
