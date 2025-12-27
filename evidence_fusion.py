@@ -728,12 +728,7 @@ class ExperimentEvaluator:
                 'vulnerability_type': tc.get('vulnerability_type', 'Unknown'),
                 'module_risk_level': tc['medical_context']['risk_level']
             })
-            
-            # Progress Display
-            if i % 10 == 0 or i == len(test_cases):
-                print(f"Progress: {i}/{len(test_cases)}")
         
-        print(f"Batch inspection completed")
         return results
     
     def calculate_metrics(self, results: List[Dict], 
@@ -776,7 +771,6 @@ class ExperimentEvaluator:
     # Confidence Distribution Analysis
     # ========================================================================
     def analyze_confidence_distribution(self, test_cases: List[Dict]) -> Dict:
-        print("\n")
         print("Confidence Distribution Analysis")
         results = self.run_batch_detection(test_cases, method='full')
     
@@ -809,39 +803,27 @@ class ExperimentEvaluator:
             all_dist[cat] += 1
 
         # Output Statistics
-        print(f"\n📊 Overall Confidence Distribution (n={len(results)}):")
         for cat in ["High (≥0.70)", "Medium-High (0.50-0.70)", 
                     "Medium-Low (0.30-0.50)", "Low (<0.30)"]:
             count = all_dist[cat]
             pct = count / len(results) * 100
-            print(f"  {cat}: {count:2d} cases ({pct:5.1f}%)")
 
-        print(f"\n✅ True Vulnerabilities (n={len(true_pos)}):")
-        print(f"  Average Confidence: {np.mean(tp_confidences):.4f} ± {np.std(tp_confidences):.4f}")
-        print(f"  Distribution:")
         for cat in ["High (≥0.70)", "Medium-High (0.50-0.70)", 
                     "Medium-Low (0.30-0.50)", "Low (<0.30)"]:
             count = tp_dist[cat]
             pct = count / len(true_pos) * 100
-            print(f"    {cat}: {count:2d} ({pct:5.1f}%)")
 
-        print(f"\n❌ Secure Implementations (n={len(true_neg)}):")
         if len(true_neg) > 0:
-            print(f"  Average Confidence: {np.mean(tn_confidences):.4f} ± {np.std(tn_confidences):.4f}")
-            print(f"  Distribution:")
             for cat in ["High (≥0.70)", "Medium-High (0.50-0.70)", 
                         "Medium-Low (0.30-0.50)", "Low (<0.30)"]:
                 count = tn_dist[cat]
                 pct = count / len(true_neg) * 100
-                print(f"    {cat}: {count:2d} ({pct:5.1f}%)")
 
         # Key Indicator: Confidence Gap
         if len(true_neg) > 0:
             conf_gap = np.mean(tp_confidences) - np.mean(tn_confidences)
-            print(f"\n🔍 Key Validation Metrics:")
-            print(f"  Confidence Gap: {conf_gap:.4f}")
             if conf_gap > 0.40:
-                print(f"  ✓ Large separation indicates effective confidence quantification")
+                print(f"Large separation indicates effective confidence quantification")
             
             # Cohen's d effect size
             pooled_std = np.sqrt((np.std(tp_confidences)**2 + np.std(tn_confidences)**2) / 2)
@@ -851,13 +833,6 @@ class ExperimentEvaluator:
         boundary_cases = sum(1 for conf in tp_confidences + tn_confidences 
                             if 0.40 <= conf <= 0.60)
         boundary_pct = boundary_cases / len(results) * 100
-
-        print(f"\n💡 Parameter Sensitivity Explanation:")
-        print(f"  Boundary cases (0.40-0.60): {boundary_cases}/{len(results)} ({boundary_pct:.1f}%)")
-        if boundary_pct < 20:
-            print(f"  → Low boundary case ratio explains CV=0.00%")
-            print(f"  → Most cases have decisive confidence scores far from threshold")
-            print(f"  → This indicates **robustness**, not insensitivity")
 
         # Save the result
         output_file = os.path.join(OUTPUT_DIR, 'confidence_distribution.csv')
@@ -899,7 +874,6 @@ class ExperimentEvaluator:
     # ========================================================================
     def compare_methods(self, test_cases: List[Dict], 
                     confidence_threshold: float = 0.5) -> pd.DataFrame:
-        print("Method Comparison")
         
         methods = {
             'SQLMap Only': 'sqlmap_only',
@@ -912,7 +886,6 @@ class ExperimentEvaluator:
         results_dict = {}
         
         for method_name, method_code in methods.items():
-            print(f"\nTest Method: {method_name}")
             results = self.run_batch_detection(test_cases, method=method_code)
             metrics = self.calculate_metrics(results, confidence_threshold)
             results_dict[method_name] = metrics
@@ -959,7 +932,6 @@ class ExperimentEvaluator:
         ]
         
         for rule_name, rule_id in rules_to_test:
-            print(f"\n[Test] Remove Rule{rule_id}: {rule_name}")
             
             # Temporary Disable Rule
             metrics = self._evaluate_without_rule(test_cases, rule_id, confidence_threshold)
@@ -1012,7 +984,7 @@ class ExperimentEvaluator:
         self.fusion.divergence_threshold = original_divergence_threshold
         self.fusion.strong_evidence_threshold = original_strong_evidence_threshold
         self.fusion.medical_risk_bonus = original_medical_risk_bonus
-        self.fusion._disable_rule3 = False  # Clear flag (formerly _disable_rule4)
+        self.fusion._disable_rule3 = False
         
         return metrics
     
@@ -1103,7 +1075,6 @@ class ExperimentEvaluator:
         results_dict = {}
         
         for param_value in param_range:
-            print(f"\nTest parameter values: {param_value}")
             
             # Temporary parameter modification
             if param_name == 'tool_weight_sqlmap':
@@ -1164,6 +1135,7 @@ class ExperimentEvaluator:
         test_cases = self.load_test_cases(test_cases_file)
         
         # Experiment 1: Confidence Analysis
+        print("\n【Experiment 1】Confidence Analysis")
         conf_analysis = self.analyze_confidence_distribution(test_cases)
         
         # Experiment 2: Method Comparison
