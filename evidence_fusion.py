@@ -654,7 +654,7 @@ class ExperimentEvaluator:
                 raise ValueError("The JSON file must contain the ‘test_cases’ field.")
             
             test_cases = data['test_cases']
-            print(f"Loaded successfully {len(test_cases)} test case")
+            print(f"Loaded successfully {len(test_cases)} test case") #Remove!!!
             return test_cases
             
         except FileNotFoundError:
@@ -670,7 +670,7 @@ class ExperimentEvaluator:
                         method: str = 'full') -> List[Dict]:
         results = []
         
-        print(f"Start batch detection (Method: {method})...")
+        print(f"Start batch detection (Method: {method})...") #Remove!!!
         print(f"Total {len(test_cases)} test case")
         
         for i, tc in enumerate(test_cases, 1):
